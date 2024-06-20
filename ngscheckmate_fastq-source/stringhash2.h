@@ -7,6 +7,7 @@
 typedef struct integer2
 {
    char c; // 0 or 1
+   char b; // 'A','C','G','T'
    int i; // index
 } int2;
 

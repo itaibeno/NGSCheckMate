@@ -37,7 +37,7 @@ char nodeptherror;
 char* index_array;
 
 hash* read_patternfile_construct_hash(char*);
-void store_each_pattern (char*, char, int, hash*);
+void store_each_pattern (char*, char, int, char, hash*);
 long*** build_count_array(void);
 void* read_fastq_thread(void*);
 void read_fastq (char*, hash*, long**, int, double, long, long);

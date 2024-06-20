@@ -43,18 +43,18 @@ hash* read_patternfile_construct_hash(char* patternfilename){
     k=0;
     while(fread(&patternline,sizeof(Patternline),1,pattern_file) != 0){
        convert2str(patternline.pattern,&patternstr,&rcpatternstr);
-       store_each_pattern(patternstr,0,patternline.index,h);  // reference allele
-       store_each_pattern(rcpatternstr,0,patternline.index,h);  // reference allele, rc
        if(k==0) offset=(PATTERNLEN-1)/2;
        else if(k==1) offset=PATTERNLEN-1;
        else offset=0;
+       store_each_pattern(patternstr,0,patternline.index, patternstr[offset], h);  // reference allele
+       store_each_pattern(rcpatternstr,0,patternline.index, rcpatternstr[PATTERNLEN-offset-1], h);  // reference allele, rc
        original_b = patternstr[offset];
        for(j=0;j<4;j++){
           if(base[j]!=original_b) {
              patternstr[offset]=base[j];
              rcpatternstr[PATTERNLEN-offset-1]=rcbase[j];
-             store_each_pattern(patternstr,1,patternline.index,h);  // alt allele
-             store_each_pattern(rcpatternstr,1,patternline.index,h);  // alt allele, rc
+             store_each_pattern(patternstr,1,patternline.index, patternstr[offset], h);  // alt allele
+             store_each_pattern(rcpatternstr,1,patternline.index, rcpatternstr[PATTERNLEN-offset-1], h);  // alt allele, rc
           }
        }
        if(patternline.index>max_index) max_index=patternline.index;
@@ -68,9 +68,10 @@ hash* read_patternfile_construct_hash(char* patternfilename){
 }
 
 
-void store_each_pattern (char* pattern, char ref_or_alt, int index, hash* h){
+void store_each_pattern (char* pattern, char ref_or_alt, int index, char base_at_offset, hash* h){
        int2 hashval;
        hashval.c=ref_or_alt;
+       hashval.b=base_at_offset;
        hashval.i=index;
        insert_into_hash(pattern,strlen(pattern),hashval,h);
 }
@@ -107,9 +108,10 @@ long*** build_count_array(void)
    int i;
    int ti;
    long*** count_arrays = (long***)malloc(nthread*sizeof(long**));
+   // ref, alt, altA ,altC, altG, altT
    for(ti=0;ti<nthread;ti++){
-     count_arrays[ti]=(long**)malloc(2*sizeof(long*));
-     for(i=0;i<2;i++) count_arrays[ti][i]=(long*)calloc((max_index+2),sizeof(long));
+     count_arrays[ti]=(long**)malloc(6*sizeof(long*));
+     for(i=0;i<6;i++) count_arrays[ti][i]=(long*)calloc((max_index+2),sizeof(long));
    }
    return(count_arrays);
 }
@@ -388,13 +390,60 @@ void read_fastq_PE (char* fastqfilename, char* fastqfilename2, hash* h, long** c
               last_i=strlen(seq)-patternlength;
               for(i=0;i<=last_i;i++){
                 val=search_hash(seq+i,patternlength,h);
-                if(val.i!=-1) { count_array[val.c][val.i]++; break; } // val.c==2 means decoy
+                if(val.i!=-1) {
+                  count_array[val.c][val.i]++;
+                  if (val.c == 1){
+                    switch (val.b)
+                    {
+                    case 'A':
+                      count_array[2][val.i]++;
+                      break;
+                    case 'C':
+                      count_array[3][val.i]++;
+                      break;
+                    case 'G':
+                      count_array[4][val.i]++;
+                      break;
+                    case 'T':
+                      count_array[5][val.i]++;
+                      break;
+                    
+                    default:
+                      break;
+                    }
+                  }
+                  break;
+                } // val.c==2 means decoy
               }
-              if(val.i==-1){ // If the pattern is not found in the first mate, search the second mate. If the pattern is found in the first mate, do not search the second mate, to avoid double-counting.
+              if(val.i==-1){ // If the pattern is not found in the first mate, search the second mate. 
+              //If the pattern is found in the first mate, do not search the second mate, to avoid double-counting.
                 last_i2=strlen(seq2)-patternlength;
                 for(i=0;i<=last_i2;i++){
                   val=search_hash(seq2+i,patternlength,h);
-                  if(val.i!=-1) { count_array[val.c][val.i]++; break; } // val.c==2 means decoy
+                  if(val.i!=-1) { 
+                    count_array[val.c][val.i]++;
+                    if (val.c == 1){
+                      switch (val.b)
+                      {
+                      case 'A':
+                        count_array[2][val.i]++;
+                        break;
+                      case 'C':
+                        count_array[3][val.i]++;
+                        break;
+                      case 'G':
+                        count_array[4][val.i]++;
+                        break;
+                      case 'T':
+                        count_array[5][val.i]++;
+                        break;
+
+                      default:
+                        break;
+                      }
+                    }
+                    break;
+                  } // val.c==2 means decoy
                 }
               }
    
@@ -417,13 +466,59 @@ void read_fastq_PE (char* fastqfilename, char* fastqfilename2, hash* h, long** c
               last_i=strlen(seq)-patternlength;
               for(i=0;i<=last_i;i++){
                 val=search_hash(seq+i,patternlength,h);
-                if(val.i!=-1) { count_array[val.c][val.i]++; break; } // val.c==2 means decoy
+                if(val.i!=-1) { 
+                  count_array[val.c][val.i]++;
+                  if (val.c == 1){
+                    switch (val.b)
+                    {
+                    case 'A':
+                      count_array[2][val.i]++;
+                      break;
+                    case 'C':
+                      count_array[3][val.i]++;
+                      break;
+                    case 'G':
+                      count_array[4][val.i]++;
+                      break;
+                    case 'T':
+                      count_array[5][val.i]++;
+                      break;
+                    
+                    default:
+                      break;
+                    }
+                  }
+                  break;
+                } // val.c==2 means decoy
               }
               if(val.i==-1){ // If the pattern is not found in the first mate, search the second mate. If the pattern is found in the first mate, do not search the second mate, to avoid double-counting.
                 last_i2=strlen(seq2)-patternlength;
                 for(i=0;i<=last_i2;i++){
                   val=search_hash(seq2+i,patternlength,h);
-                  if(val.i!=-1) { count_array[val.c][val.i]++; break; } // val.c==2 means decoy
+                  if(val.i!=-1) { 
+                    count_array[val.c][val.i]++;
+                    if (val.c == 1){
+                      switch (val.b)
+                      {
+                      case 'A':
+                        count_array[2][val.i]++;
+                        break;
+                      case 'C':
+                        count_array[3][val.i]++;
+                        break;
+                      case 'G':
+                        count_array[4][val.i]++;
+                        break;
+                      case 'T':
+                        count_array[5][val.i]++;
+                        break;
+                      
+                      default:
+                        break;
+                      }
+                    }
+                    break;
+                  } // val.c==2 means decoy
                 }
               }
             }
@@ -553,25 +648,34 @@ void create_index_array(char* patternfilename){
 void print_count_array(long*** count_arrays, char* patternfilename){
   int i,ti;
   long totalcount,refcount,altcount;
+  long altA,altC,altG,altT;
   double vaf;
 
   //mark in index array which SNP index was present in the hash
   create_index_array(patternfilename);
 
-  printf("index\tref\talt\tvaf\n");
+  printf("index\tref\talt\tvaf\taltA\taltC\taltG\taltT\n");
   for(i=0;i<=max_index;i++){
-     if(index_array[i]==0) printf("%d\tNA\tNA\tNA\n",i);
+     if(index_array[i]==0) printf("%d\tNA\tNA\tNA\tNA\tNA\tNA\tNA\n",i);
      else {
         refcount=0;
         altcount=0;
+        altA=0;
+        altC=0;
+        altG=0;
+        altT=0;
         totalcount=0;
         for(ti=0;ti<nthread;ti++){
           refcount += count_arrays[ti][0][i];
           altcount += count_arrays[ti][1][i];
+          altA += count_arrays[ti][2][i];
+          altC += count_arrays[ti][3][i];
+          altG += count_arrays[ti][4][i];
+          altT += count_arrays[ti][5][i];
         }
         totalcount = refcount+altcount;
-        if(totalcount>0) printf("%d\t%ld\t%ld\t%lf\n",i,refcount,altcount,(double)altcount / (double)totalcount);
-        else printf("%d\t%ld\t%ld\tNA\n",i,refcount,altcount);
+        if(totalcount>0) printf("%d\t%ld\t%ld\t%lf\t%ld\t%ld\t%ld\t%ld\n",i,refcount,altcount,(double)altcount / (double)totalcount,altA, altC, altG, altT);
+        else printf("%d\t%ld\t%ld\tNA\t%ld\t%ld\t%ld\t%ld\n",i,refcount,altcount,altA, altC, altG, altT);
      }
   }
 
